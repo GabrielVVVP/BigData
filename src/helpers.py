@@ -25,16 +25,16 @@ def initialize_database():
 
         c.execute('''CREATE TABLE IF NOT EXISTS participants (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nome TEXT,
-            idade TEXT,
-            sexo TEXT,
-            interesse TEXT
+            nome TEXT NOT NULL,
+            idade INTEGER NULL,
+            sexo TEXT NULL,
+            interesse TEXT NULL
         )''')
 
         conn.commit()
         return
     
-def create_participant(name, age=None, sex=None, interest=None):
+def create_participant(name, age=None, sex="Outros", interest=None):
     """Add a new participant."""
     with get_db_connection() as conn:
         try:

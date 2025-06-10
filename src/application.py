@@ -7,7 +7,9 @@ from src.helpers import get_participants, hash_password
 
 def show_app():
 
+    st.image("ppges.png", use_container_width=True)  
     st.title("Atividade Interativa: Desafios e Tendências no Big Data 🚀")
+    pd.set_option('future.no_silent_downcasting', True)
     if st.session_state["sexo"] == "Feminino": 
         st.write(f"Bem-vinda, {st.session_state['name']}!")
     else:
@@ -16,8 +18,29 @@ def show_app():
     st.write("Primeiro, selecione um dos blocos abaixo, entre Desafios do Big Data e Tendências Futuras no Big Data, para começar a explorar os tópicos.")
     options = st.selectbox("Selecione um dos blocos:",["Nenhum","Desafios do Big Data", "Tendências Futuras no Big Data"],key="selected_lesson")
     st.write("Você pode navegar entre as abas para explorar diferentes tópicos.")
-    participants = get_participants()[1]
-    data = pd.DataFrame(participants, columns=["ID", "Nome", "Idade","Sexo","Interesse"]).drop(columns=["ID"])
+    mock_data = {
+                "Nome": ["Paula", "Saulo", "João"],
+                "Idade": [47, None, 80],
+                "Sexo": ["Feminino", "Masculino", None],
+                "Interesse": [None, "Machine Learning", "Data Science"]
+    }
+    try:
+        participants = get_participants()[1]
+        data = pd.DataFrame(participants, columns=["ID", "Nome", "Idade","Sexo","Interesse"]).drop(columns=["ID"])
+        data.replace("", np.nan, inplace=True)
+        data = pd.concat([data, pd.DataFrame(mock_data)], ignore_index=True)
+        data2 = data.copy()
+        for i in range(len(data2)):
+            data2.at[i, "Nome"] = hash_password(str(data2.at[i, "Nome"]))
+        data3 = data.copy()
+    except Exception as e:
+        st.error(f"Erro ao carregar os dados dos participantes: {str(e)}")
+        data = pd.DataFrame(mock_data,columns=["Nome", "Idade", "Sexo", "Interesse"])    
+        data.replace("", np.nan, inplace=True)
+        data2 = data.copy()
+        for i in range(len(data2)):
+            data2.at[i, "Nome"] = hash_password(str(data2.at[i, "Nome"]))
+        data3 = data.copy()
     if options == "Desafios do Big Data": 
         tab1, tab2, tab3 = st.tabs(["🔐 Privacidade e Proteção de Dados", "🧹 Qualidade de Dados", "🤖 Integração com IA, IoT e Blockchain"])
 
@@ -27,16 +50,15 @@ def show_app():
             st.markdown("Explore abaixo um conjunto de dados 'aparentemente anônimo' e veja como é possível reidentificar uma pessoa.")
             st.markdown("Nesta tabela, temos alguns dados de alunos que acessaram esta atividade. Para fins de demonstração, os nomes foram substituídos por hashes, mas os outros dados permanecem visíveis. Vamos analisar o risco de reidentificação.")
             
-            data2 = data.copy()
-            for i in range(len(data2)):
-                data2.at[i, "Nome"] = hash_password(str(data2.at[i, "Nome"]))
             st.dataframe(data2)    
             st.markdown("Digamos que você deseja identificar o interesse de um amigo seu específico na disciplina, mas não consegue identificá-lo pelo nome, já que está criptografado.")
             st.markdown("Aí você tem uma ideia. Não sei identificar o nome, mas posso filtrar por idade e sexo já que sei essas informações. Vamos ver se consigo encontrar um registro único que corresponda ao meu amigo.")
             st.markdown("Agora, arraste o filtro de idade abaixo e selecione uma opção de sexo e veja o risco de identificação:")
-            idade = st.slider("Filtrar por idade", 20, 70, (20, 70))
+            st.markdown("Obs: Ambos os filtros são aplicados simultaneamente, ou seja, você deve selecionar uma faixa de idade e um sexo para filtrar os dados.")
+            idade = st.slider("Filtrar por idade", 20, 90, (20, 90))
             sexo = st.selectbox("Filtrar por sexo", ["Todos"] + list(data2["Sexo"].unique()))
-            filtered_data = data2[(data2["Idade"].astype(int) >= idade[0]) & (data2["Idade"].astype(int) <= idade[1])]
+            filtered_data = data2.dropna(subset=["Idade"])  # Remove rows where "Idade" is NaN
+            filtered_data = filtered_data[(filtered_data["Idade"].astype(int) >= idade[0]) & (filtered_data["Idade"].astype(int) <= idade[1])]
             if sexo != "Todos":
                 filtered_data = filtered_data[filtered_data["Sexo"] == sexo]
 
@@ -53,14 +75,6 @@ def show_app():
             st.subheader("🧹 Análise de Qualidade de Dados")
 
             st.markdown("Nesta atividade, vamos explorar a qualidade dos dados em um conjunto de dados obtidos dos alunos.")
-            
-            mock_data = {
-                "Nome": ["Paula", "Saulo", "João"],
-                "Idade": [47, None, 30],
-                "Sexo": ["Feminino", "Masculino", None],
-                "Interesse": [None, "Machine Learning", "Data Science"]
-            }
-            data3 = pd.concat([data, pd.DataFrame(mock_data)], ignore_index=True)
 
             st.write("### 📄 Conjunto de dados:")
             st.dataframe(data3)
@@ -89,8 +103,7 @@ def show_app():
 
             # Add buttons for data cleaning
             if st.button("Preecher por média"):
-                data3["Idade"] = pd.to_numeric(data3["Idade"], errors="coerce").astype("Int64")
-                data3["Idade"].fillna(data3["Idade"].mean(), inplace=True)
+                data3["Idade"] = data3["Idade"].fillna(np.ceil(data3["Idade"].mean()))
                 st.success("Valores ausentes preenchidos com a média!")
                 st.dataframe(data3)
                 st.write("### ❓ Valores ausentes por coluna:")
@@ -99,8 +112,7 @@ def show_app():
                 st.session_state["media_button_pressed"] = True  
             if st.session_state["media_button_pressed"]:
                 if st.button("Remover dados incompletos"):
-                    data3["Idade"] = pd.to_numeric(data3["Idade"], errors="coerce").astype("Int64")
-                    data3["Idade"].fillna(data3["Idade"].mean(), inplace=True)
+                    data3["Idade"] = data3["Idade"].fillna(np.ceil(data3["Idade"].mean()))
                     st.success("Valores ausentes preenchidos com a média!")
                     st.dataframe(data3)
                     st.write("### ❓ Valores ausentes por coluna:")
