@@ -1,5 +1,6 @@
 import sqlite3
 import os
+import hashlib
 
 def get_db_connection():
     # Configuração do banco de dados
@@ -26,18 +27,19 @@ def initialize_database():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome TEXT,
             idade TEXT,
+            sexo TEXT,
             interesse TEXT
         )''')
 
         conn.commit()
         return
     
-def create_participant(name, age, interest):
+def create_participant(name, age=None, sex=None, interest=None):
     """Add a new participant."""
     with get_db_connection() as conn:
         try:
             c = conn.cursor()
-            c.execute("INSERT INTO participants (nome, idade, interesse) VALUES (?, ?, ?)", (name, age, interest))
+            c.execute("INSERT INTO participants (nome, idade, sexo, interesse) VALUES (?, ?, ?, ?)", (name, age, sex, interest))
             conn.commit()
             return True, "Participante criado corretamente!"
         except sqlite3.IntegrityError as e:
@@ -51,4 +53,7 @@ def get_participants():
             c.execute("SELECT * FROM participants")
             return True, c.fetchall()
         except sqlite3.IntegrityError as e:
-            return False, f"Error: {str(e)}"             
+            return False, f"Error: {str(e)}"          
+
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()           
